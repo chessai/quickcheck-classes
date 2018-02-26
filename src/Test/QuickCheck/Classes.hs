@@ -76,6 +76,7 @@ import GHC.Ptr (Ptr(..))
 import System.IO.Unsafe
 import Test.QuickCheck hiding ((.&.))
 import Test.QuickCheck.Property (Property(..))
+import Test.QuickCheck.TypeOps
 import Text.Read (readMaybe)
 import qualified Data.Aeson as AE
 import qualified Data.Primitive as P
@@ -152,15 +153,14 @@ foldMapA :: (Foldable t, Monoid m, Applicative f) => (a -> f m) -> t a -> f m
 foldMapA f = getAp . foldMap (Ap . f)
 
 -- | Tests the following properties:
---
--- [/Partial Isomorphism/]
+-- -- [/Partial Isomorphism/]
 --   @decode . encode ≡ Just@
 -- [/Encoding Equals Value/]
 --   @decode . encode ≡ Just . toJSON@
 --
 -- Note that in the second propertiy, the type of decode is @ByteString -> Value@,
 -- not @ByteString -> a@
-jsonLaws :: (ToJSON a, FromJSON a, Show a, Arbitrary a, Eq a) => Proxy a -> Laws
+jsonLaws :: With [ToJSON, FromJSON, Show, Arbitrary, Eq] a => Proxy a -> Laws
 jsonLaws p = Laws "ToJSON/FromJSON"
   [ ("Partial Isomorphism", jsonEncodingPartialIsomorphism p)
   , ("Encoding Equals Value", jsonEncodingEqualsValue p)
@@ -172,13 +172,13 @@ jsonLaws p = Laws "ToJSON/FromJSON"
 --   @fromList . toList ≡ id@
 -- [/Length Preservation/]
 --   @fromList xs ≡ fromListN (length xs) xs@
-isListLaws :: (IsList a, Show a, Show (Item a), Arbitrary a, Arbitrary (Item a), Eq a) => Proxy a -> Laws
+isListLaws :: With [IsList, Show, Arbitrary, Eq] a => With [Show, Arbitrary] (Item a) => Proxy a -> Laws
 isListLaws p = Laws "IsList"
   [ ("Partial Isomorphism", isListPartialIsomorphism p)
   , ("Length Preservation", isListLengthPreservation p)
   ]
 
-showReadLaws :: (Show a, Read a, Eq a, Arbitrary a) => Proxy a -> Laws
+showReadLaws :: With [Show, Read, Eq, Arbitrary] a => Proxy a -> Laws
 showReadLaws p = Laws "Show/Read"
   [ ("Partial Isomorphism", showReadPartialIsomorphism p)
   ]
@@ -187,7 +187,7 @@ showReadLaws p = Laws "Show/Read"
 --
 -- [/Associative/]
 --   @a <> (b <> c) ≡ (a <> b) <> c@
-semigroupLaws :: (Semigroup a, Eq a, Arbitrary a, Show a) => Proxy a -> Laws
+semigroupLaws :: With [Semigroup, Eq, Arbitrary, Show] a => Proxy a -> Laws
 semigroupLaws p = Laws "Semigroup"
   [ ("Associative", semigroupAssociative p)
   ]
@@ -205,7 +205,7 @@ semigroupLaws p = Laws "Semigroup"
 -- the left hand side of the implication arrow does not hold, we
 -- do not retry. Consequently, these properties only end up being
 -- useful when the data type has a small number of inhabitants.
-eqLaws :: (Eq a, Arbitrary a, Show a) => Proxy a -> Laws
+eqLaws :: With [Eq, Arbitrary, Show] a => Proxy a -> Laws
 eqLaws p = Laws "Eq"
   [ ("Transitive", eqTransitive p)
   , ("Symmetric", eqSymmetric p)
@@ -218,7 +218,7 @@ eqLaws p = Laws "Eq"
 --   @a ≤ b ∧ b ≤ c ⇒ a ≤ c@
 -- [/Comparable/]
 --   @a ≤ b ∨ a > b@
-ordLaws :: (Ord a, Arbitrary a, Show a) => Proxy a -> Laws
+ordLaws :: With [Ord, Arbitrary, Show] a => Proxy a -> Laws
 ordLaws p = Laws "Ord"
   [ ("Transitive", ordTransitive p)
   , ("Comparable", ordComparable p)
@@ -246,8 +246,7 @@ monoidLaws p = Laws "Monoid"
 commutativeMonoidLaws :: (Monoid a, Eq a, Arbitrary a, Show a) => Proxy a -> Laws
 commutativeMonoidLaws p = Laws "Commutative Monoid" $ lawsProperties (monoidLaws p) ++
   [ ("Commutative", monoidCommutative p)
-  ]
-
+  ] 
 -- | Tests the following properties:
 --
 -- [/Quotient Remainder/]
